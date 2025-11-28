@@ -1,6 +1,9 @@
+// Estrategia: cargar fuentes globales y envolver la aplicación con el BrandingProvider para compartir colores en todas las rutas.
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import type { ReactNode } from 'react';
+
+import { BrandingProvider } from '@/context/branding-context';
 import './globals.css';
 
 const geistSans = localFont({
@@ -26,7 +29,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>{children}</body>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <BrandingProvider>{children}</BrandingProvider>
+      </body>
     </html>
   );
 }
