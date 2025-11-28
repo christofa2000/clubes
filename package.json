@@ -1,0 +1,30 @@
+{
+  "name": "clubes",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Monorepo SaaS de gestión de clubes (NestJS + Next.js)",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test"
+  },
+  "keywords": [
+    "clubs",
+    "saas",
+    "turborepo"
+  ],
+  "author": "",
+  "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "turbo": "^2.6.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "npm@11.6.1"
+}
