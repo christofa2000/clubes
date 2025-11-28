@@ -1,0 +1,313 @@
+# .cursorrules — Proyecto "Gestión de Clubes"
+
+Este archivo define cómo debe trabajar la IA (Cursor, GPT, etc.) dentro de este repo.
+
+---
+
+## 1. Documentos que SON la verdad del proyecto
+
+Antes de tocar código de backend o frontend, SIEMPRE leer:
+
+1. `docs/NEGOCIO_V1.md`  
+   → Define el negocio, roles, reglas y alcance V1.
+
+2. `docs/TECH_RULES.md`  
+   → Define el stack técnico backend, estilo de código y normas.
+
+3. `docs/USE_CASES.md`  
+   → Define los flujos de negocio que el código debe implementar.
+
+4. `docs/MODULES_STRUCTURE.md`  
+   → Define los módulos backend y su responsabilidad.
+
+5. Diagramas:
+   - `docs/diagrama-arquitectura.jpg`
+   - `docs/DIAGRAMA ERD.jpg`
+
+Regla de prioridad:
+
+1. NEGOCIO_V1.md
+2. USE_CASES.md
+3. MODULES_STRUCTURE.md
+4. TECH_RULES.md
+
+Si hay conflicto, NO inventar. Preguntar (en su defecto, dejar todo preparado pero no asumir reglas nuevas).
+
+---
+
+## 2. Scope del proyecto
+
+Este repo es una **app de gestión de clubes** multi-tenant (multi-club), con:
+
+- Panel SUPER_ADMIN (gestiona clubes y dueños)
+- Panel ADMIN (gestiona todo el club)
+- Panel PROFESOR (sus clases + asistencia)
+- Panel ALUMNO (sus clases + reservas + pagos)
+
+En V1:
+
+- Foco fuerte en **backend sólido**
+- Frontend inicial en Next.js para paneles web
+- Mobile (React Native) vendrá después, no mezclar ahora
+
+---
+
+## 3. Reglas generales para la IA (muy importante)
+
+1. **No inventar funcionalidades** que no estén en `NEGOCIO_V1.md`.
+2. **No simplificar reglas del negocio** para “hacerlo más fácil”.
+3. Cualquier endpoint, servicio o tabla nueva debe:
+   - Estar alineada con los casos de uso.
+   - Respetar multi-tenant por `clubId`.
+4. No romper la separación de módulos.
+5. No usar `any` explícito en TypeScript.
+6. Es preferible dejar un TODO claro y documentado que inventar comportamiento.
+
+Formato sugerido de TODO:
+
+```ts
+// TODO(negocio): completar lógica X cuando se defina en NEGOCIO_V2.md
+4. Backend — Reglas técnicas (resumen operativo)
+
+Detalle completo en docs/TECH_RULES.md.
+
+Lenguaje: TypeScript estricto.
+
+Runtime: Node.js 20+.
+
+Framework: NestJS (arquitectura modular).
+
+DB: PostgreSQL / Supabase.
+
+ORM: Prisma.
+
+Arquitectura: Controller → Service → Repository/Prisma.
+
+Reglas clave:
+
+Multi-tenant obligatorio: cada query de negocio debe filtrar por clubId.
+
+Roles: SUPER_ADMIN, ADMIN, TEACHER (PROFESOR), STUDENT (ALUMNO).
+
+Autenticación: JWT (o sesiones), payload con userId, role, clubId (null en SUPER_ADMIN).
+
+Autorización: usar guards o middlewares para validar rol y club.
+
+Errores HTTP bien tipados (400, 401, 403, 404, 409), nunca mensajes genéricos.
+
+Cuando generes código backend:
+
+Usar módulos definidos en MODULES_STRUCTURE.md:
+
+auth, users, clubs, branches, activities, plans, classes,
+reservations, attendance, payments, cashbox, reports, notifications.
+
+NO meter toda la lógica en un módulo mezclado.
+
+NO acceder a la DB de otro módulo directamente: usar servicios.
+
+5. Frontend — Stack y reglas
+
+El frontend web se hace con mi stack:
+
+Next.js (App Router, versión actual estable)
+
+TypeScript estricto
+
+React (funcional, hooks)
+
+Tailwind CSS
+
+shadcn/ui para componentes base (formularios, tablas, modals, etc.)
+
+Radix UI como base de accesibilidad (si aplica vía shadcn)
+
+Opcional: Zustand para estado local complejo
+
+Requests a backend con fetch tipado o cliente API ligero
+
+5.1. Principios de frontend
+
+UX clara y simple, sobre todo para ADMIN y PROFESOR.
+
+Nada de CSS inline salvo casos muy puntuales.
+→ Usar Tailwind y, si hace falta, clases utilitarias propias.
+
+Componentes reutilizables:
+
+Layouts
+
+Navbars / sidebars según rol
+
+Tablas, formularios, modals
+
+Evitar lógica de negocio en el frontend:
+
+Validar formato de inputs.
+
+La lógica de reglas (multi-tenant, cupos, planes) la decide el backend.
+
+5.2. Estructura básica del front (orientativa)
+
+No obligatorio, pero recomendado:
+
+app/
+  (auth)/
+    login/
+  (superadmin)/
+    dashboard/
+    clubs/
+  (admin)/
+    dashboard/
+    students/
+    teachers/
+    activities/
+    plans/
+    classes/
+    reservations/
+    payments/
+    reports/
+  (teacher)/
+    dashboard/
+    classes/
+    attendance/
+  (student)/
+    dashboard/
+    classes/
+    reservations/
+    payments/
+  layout.tsx
+  page.tsx  # landing / portal
+
+
+Reglas:
+
+Usar layouts por rol donde tenga sentido.
+
+No mezclar componentes de SUPER_ADMIN con los de ADMIN/PROFESOR/ALUMNO.
+
+5.3. Estilo y componentes
+
+Tailwind para layout y diseño.
+
+shadcn/ui para:
+
+Buttons
+
+Inputs
+
+Dialogs
+
+Tables
+
+Toasters
+
+Crear una carpeta de UI propia para wrappers:
+
+src/components/ui/
+src/components/layout/
+src/components/forms/
+src/components/tables/
+
+
+Mantener el diseño limpio:
+
+Espaciado suficiente (p-4, p-6, etc.).
+
+Tipografía consistente (se definirá más adelante, pero usar una base coherente).
+
+Colores de la UI adaptables a los colores del club en el futuro (tema por club más adelante).
+
+6. Cómo debe trabajar la IA en este repo
+6.1. Antes de generar código
+
+Siempre:
+
+Leer NEGOCIO_V1.md para entender el contexto.
+
+Leer USE_CASES.md para entender el flujo que se quiere implementar.
+
+Revisar MODULES_STRUCTURE.md para saber dónde ubicar el código.
+
+Respetar TECH_RULES.md para stack y estilo.
+
+6.2. Al crear un nuevo feature
+
+Responder internamente:
+
+¿Qué caso de uso estoy implementando?
+
+¿Qué módulo corresponde?
+
+¿Qué entidades de negocio se ven afectadas?
+
+¿Qué rol puede usar este feature?
+
+¿Necesito filtrar por clubId? (casi siempre la respuesta es “sí”).
+
+6.3. Al tocar código existente
+
+No romper contratos públicos (endpoints, DTOs) sin actualizar documentación y comentarios.
+
+No cambiar reglas de negocio sin reflejarlo en NEGOCIO_V1.md (esto debe hacerlo un humano).
+
+7. Git y organización
+
+Commits claros, en castellano o inglés pero consistentes.
+
+No agregar archivos generados (dist, build, etc.).
+
+No subir .env ni credenciales.
+
+8. Qué NO debe hacer la IA
+
+No crear funcionalidad de AFIP, Mercado Pago, Stripe, ni integraciones externas (fuera de V1).
+
+No crear páginas públicas por club.
+
+No permitir auto-registro de alumnos, profesores o admins.
+
+No exponer datos de un club a otro.
+
+No asumir flujos no descritos en los casos de uso.
+
+9. Prioridad actual del proyecto
+
+Orden recomendado de trabajo para la IA:
+
+Modelo de datos (Prisma, schema aligned con ERD).
+
+Módulos backend clave:
+
+auth
+
+users
+
+clubs
+
+students/teachers (puede ser dentro de users, pero tipado)
+
+activities
+
+plans
+
+classes
+
+reservations
+
+attendance
+
+payments
+
+Endpoints que cubran los UC de USE_CASES_V1.
+
+Frontend mínimo para:
+
+Login
+
+Panel ADMIN (version inicial)
+
+Panel PROFESOR (ver clases + asistencia)
+
+Panel ALUMNO (ver y reservar clases + ver pagos).
+```
