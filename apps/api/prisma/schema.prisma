@@ -1,0 +1,323 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum PlanType {
+  CLASSES_PER_WEEK
+  UNLIMITED
+}
+
+enum StudentPlanStatus {
+  ACTIVE
+  INACTIVE
+  CANCELLED
+}
+
+enum ClassType {
+  GROUP
+  INDIVIDUAL
+}
+
+enum ReservationStatus {
+  ACTIVE
+  CANCELED
+  WAITING_LIST
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+}
+
+enum AttendanceSource {
+  TEACHER
+  QR
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  CARD
+  OTHER
+}
+
+enum CashboxEntryType {
+  INFLOW
+  OUTFLOW
+}
+
+model Club {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  logoUrl        String?
+  primaryColor   String?
+  secondaryColor String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  users        User[]
+  branches     Branch[]
+  activities   Activity[]
+  plans        Plan[]
+  classes      Class[]
+  occurrences  ClassOccurrence[]
+  reservations Reservation[]
+  attendances  Attendance[]
+  payments     Payment[]
+  studentPlans StudentPlan[]
+  cashbox      CashboxEntry[]
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String
+  firstName       String
+  lastName        String
+  phone           String?
+  dni             String?   @unique
+  birthDate       DateTime?
+  address         String?
+  emergencyContact String?
+  guardianName    String?
+  role            UserRole
+  active          Boolean   @default(true)
+  clubId          String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  club           Club?               @relation(fields: [clubId], references: [id])
+  teachingClasses Class[]            @relation("ClassTeacher")
+  studentPlans    StudentPlan[]
+  reservations    Reservation[]      @relation("ReservationStudent")
+  reservedBy      Reservation[]      @relation("ReservationCreator")
+  attendances     Attendance[]
+  payments        Payment[]
+  cashboxEntries  CashboxEntry[]
+
+  @@index([clubId])
+}
+
+model Branch {
+  id          String   @id @default(cuid())
+  clubId      String
+  name        String
+  address     String
+  contactInfo String?
+  notes       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  classes Class[]
+
+  @@index([clubId])
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  clubId      String
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  plans  Plan[]
+  classes Class[]
+
+  @@index([clubId])
+}
+
+model Plan {
+  id           String    @id @default(cuid())
+  clubId       String
+  activityId   String
+  name         String
+  type         PlanType
+  price        Decimal   @db.Decimal(10, 2)
+  classesPerWeek Int?
+  description  String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  club     Club      @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  activity Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  studentPlans StudentPlan[]
+
+  @@index([clubId])
+  @@index([activityId])
+}
+
+model StudentPlan {
+  id         String             @id @default(cuid())
+  studentId  String
+  planId     String
+  clubId     String
+  status     StudentPlanStatus  @default(ACTIVE)
+  startDate  DateTime           @default(now())
+  endDate    DateTime?
+  notes      String?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  plan    Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  club    Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@index([studentId])
+  @@index([planId])
+  @@index([clubId])
+}
+
+model Class {
+  id           String    @id @default(cuid())
+  clubId       String
+  branchId     String
+  activityId   String
+  teacherId    String
+  name         String
+  description  String?
+  classType    ClassType @default(GROUP)
+  level        String?
+  capacity     Int
+  reservationModeAdminOnly Boolean @default(false)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  club     Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  teacher  User     @relation("ClassTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  occurrences ClassOccurrence[]
+
+  @@index([clubId])
+  @@index([branchId])
+  @@index([activityId])
+  @@index([teacherId])
+}
+
+model ClassOccurrence {
+  id         String   @id @default(cuid())
+  classId    String
+  clubId     String
+  startsAt   DateTime
+  endsAt     DateTime
+  capacity   Int
+  cancelled  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  club  Club  @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  reservations Reservation[]
+  attendances  Attendance[]
+
+  @@index([classId])
+  @@index([clubId])
+  @@index([startsAt])
+}
+
+model Reservation {
+  id             String             @id @default(cuid())
+  clubId         String
+  occurrenceId   String
+  studentId      String
+  reservedById   String?
+  status         ReservationStatus  @default(ACTIVE)
+  notes          String?
+  canceledAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  club        Club            @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  occurrence  ClassOccurrence @relation(fields: [occurrenceId], references: [id], onDelete: Cascade)
+  student     User            @relation("ReservationStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  reservedBy  User?           @relation("ReservationCreator", fields: [reservedById], references: [id], onDelete: SetNull)
+  attendance  Attendance?
+
+  @@index([clubId])
+  @@index([occurrenceId])
+  @@index([studentId])
+}
+
+model Attendance {
+  id            String            @id @default(cuid())
+  clubId        String
+  occurrenceId  String
+  studentId     String
+  reservationId String? @unique
+  status        AttendanceStatus  @default(PRESENT)
+  source        AttendanceSource  @default(TEACHER)
+  notedAt       DateTime          @default(now())
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  club        Club            @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  occurrence  ClassOccurrence @relation(fields: [occurrenceId], references: [id], onDelete: Cascade)
+  student     User            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  reservation Reservation?    @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+
+  @@index([clubId])
+  @@index([occurrenceId])
+  @@index([studentId])
+}
+
+model Payment {
+  id           String        @id @default(cuid())
+  clubId       String
+  studentId    String
+  studentPlanId String?
+  amount       Decimal       @db.Decimal(12, 2)
+  method       PaymentMethod
+  concept      String?
+  note         String?
+  paidAt       DateTime      @default(now())
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  club        Club         @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  student     User         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentPlan StudentPlan? @relation(fields: [studentPlanId], references: [id], onDelete: SetNull)
+
+  @@index([clubId])
+  @@index([studentId])
+  @@index([studentPlanId])
+}
+
+model CashboxEntry {
+  id        String           @id @default(cuid())
+  clubId    String
+  userId    String?
+  entryDate DateTime         @default(now())
+  amount    Decimal          @db.Decimal(12, 2)
+  type      CashboxEntryType
+  description String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([clubId])
+  @@index([entryDate])
+}
+
