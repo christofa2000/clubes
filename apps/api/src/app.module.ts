@@ -8,7 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { BranchesModule } from './modules/branches/branches.module';
 import { CashboxModule } from './modules/cashbox/cashbox.module';
 import { ClassesModule } from './modules/classes/classes.module';
-import { ClubsModule } from './modules/clubs/clubs.module';
+import { ClubsModule } from './clubs/clubs.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { PlansModule } from './modules/plans/plans.module';
