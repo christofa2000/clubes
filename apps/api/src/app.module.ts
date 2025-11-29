@@ -4,7 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { HealthModule } from './health/health.module';
 import { ActivitiesModule } from './modules/activities/activities.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
-import { AuthModule } from './modules/auth/auth.module';
+import { AuthModule } from './auth/auth.module';
 import { BranchesModule } from './modules/branches/branches.module';
 import { CashboxModule } from './modules/cashbox/cashbox.module';
 import { ClassesModule } from './modules/classes/classes.module';

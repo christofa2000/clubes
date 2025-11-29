@@ -1,9 +1,4 @@
-import { UserRole } from '@prisma/client';
+import type { CurrentUser as CurrentUserType } from '../../auth/types/current-user.type';
 
-export interface AuthUser {
-  id: string;
-  role: UserRole;
-  clubId: string | null;
-  email: string;
-}
-
+export type CurrentUser = CurrentUserType;
+export type AuthUser = CurrentUserType;
