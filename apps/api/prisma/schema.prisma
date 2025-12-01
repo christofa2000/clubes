@@ -59,14 +59,16 @@ enum CashboxEntryType {
 }
 
 model Club {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   name           String
   description    String?
   logoUrl        String?
   primaryColor   String?
   secondaryColor String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isActive       Boolean   @default(true)
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   users        User[]
   branches     Branch[]
@@ -84,6 +86,7 @@ model Club {
 model User {
   id              String    @id @default(cuid())
   email           String    @unique
+  supabaseUserId  String?   @unique
   passwordHash    String
   firstName       String
   lastName        String
@@ -95,6 +98,7 @@ model User {
   guardianName    String?
   role            UserRole
   active          Boolean   @default(true)
+  deletedAt       DateTime?
   clubId          String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
