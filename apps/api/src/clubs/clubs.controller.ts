@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -58,6 +59,12 @@ export class ClubsController {
     @Body() dto: UpdateClubDto,
   ) {
     return this.clubsService.updateMyClub(user, dto);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN)
+  deleteClub(@Param('id') id: string) {
+    return this.clubsService.deleteClub(id);
   }
 }
 

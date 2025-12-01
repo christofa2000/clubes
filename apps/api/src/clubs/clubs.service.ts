@@ -18,6 +18,10 @@ export class ClubsService {
 
   findAll() {
     return this.prisma.club.findMany({
+      where: {
+        isActive: true,
+        deletedAt: null,
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -60,6 +64,28 @@ export class ClubsService {
     });
   }
 
+  async deleteClub(id: string) {
+    const club = await this.prisma.club.findUnique({
+      where: { id },
+    });
+
+    if (!club) {
+      throw new NotFoundException('CLUB_NOT_FOUND');
+    }
+
+    if (!club.isActive || club.deletedAt) {
+      throw new BadRequestException('CLUB_ALREADY_DELETED');
+    }
+
+    return this.prisma.club.update({
+      where: { id },
+      data: {
+        isActive: false,
+        deletedAt: new Date(),
+      },
+    });
+  }
+
   private async ensureExists(id: string) {
     const exists = await this.prisma.club.count({ where: { id } });
     if (!exists) {
@@ -67,4 +93,11 @@ export class ClubsService {
     }
   }
 }
+
+
+
+
+
+
+
 
