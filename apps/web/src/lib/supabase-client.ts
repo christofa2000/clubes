@@ -28,9 +28,14 @@ export const getSupabaseClient = (): SupabaseClient => {
 
     client = createClient(url, anonKey, {
       auth: {
-        persistSession: true, // Cambiado a true para mantener la sesión
+        // persistSession: true - Mantiene la sesión en localStorage para que el usuario permanezca autenticado
+        // después de hacer login o establecer contraseña desde invitación
+        persistSession: true,
+        // detectSessionInUrl: true - Detecta automáticamente tokens en la URL (útil para OAuth y magic links)
+        // Aunque en /auth/set-password leemos manualmente los tokens, esta opción ayuda en otros flujos
         detectSessionInUrl: true,
-        autoRefreshToken: true, // Refresca automáticamente el token cuando expira
+        // autoRefreshToken: true - Refresca automáticamente el token cuando expira
+        autoRefreshToken: true,
         storage: typeof window !== 'undefined' ? window.localStorage : undefined,
       },
     });
