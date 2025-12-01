@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  Param,
   Post,
   Query,
   UseGuards,
@@ -17,6 +19,7 @@ import type { CurrentUser } from '../common/interfaces/auth-user.interface';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
+import { InviteUserDto } from './dto/invite-user.dto';
 import { UserFiltersDto } from './dto/user-filters.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -70,7 +73,51 @@ export class UsersController {
   listTeachers(@CurrentUserDecorator() user: CurrentUser) {
     return this.usersService.listTeachers(user);
   }
+
+  @Delete('admins/:id')
+  @Roles(UserRole.SUPER_ADMIN)
+  deleteAdmin(
+    @Param('id') id: string,
+    @CurrentUserDecorator() user: CurrentUser,
+  ) {
+    return this.usersService.deleteAdmin(id, user);
+  }
+
+  /**
+   * Invita a un usuario al sistema enviando un email de invitación.
+   * 
+   * Solo SUPER_ADMIN puede invitar usuarios.
+   * El sistema enviará un email con un magic link que redirige a /auth/set-password.
+   * El usuario debe establecer su contraseña antes de poder hacer login.
+   * 
+   * @param dto - Datos del usuario a invitar (email, role, firstName, clubId, etc.)
+   * @returns Usuario creado en Prisma con estado inicial (active=false hasta que establezca contraseña)
+   */
+  @Post('invite')
+  @Roles(UserRole.SUPER_ADMIN)
+  inviteUser(@Body() dto: InviteUserDto) {
+    return this.usersService.inviteUser(dto);
+  }
+
+  /**
+   * Elimina un usuario del sistema.
+   * 
+   * Realiza eliminación REAL en Supabase Auth y soft delete en Prisma.
+   * Solo SUPER_ADMIN puede eliminar usuarios.
+   * 
+   * @param id - ID del usuario a eliminar (ID interno de Prisma)
+   * @param user - Usuario actual que ejecuta la acción
+   * @returns Usuario actualizado con soft delete
+   */
+  @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN)
+  deleteUser(@Param('id') id: string, @CurrentUserDecorator() user: CurrentUser) {
+    return this.usersService.deleteUser(id, user);
+  }
 }
+
+
+
 
 
 
