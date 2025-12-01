@@ -20,6 +20,8 @@ const buttonVariants = cva(
           'border border-[var(--brand-border)] bg-transparent text-[var(--brand-text)] hover:bg-[var(--brand-primary-soft)]/20',
         ghost:
           'text-[var(--brand-text)] hover:bg-[var(--brand-primary-soft)]/20 hover:text-[var(--brand-accent)]',
+        destructive:
+          'bg-red-600 text-white shadow-lg hover:bg-red-700 active:bg-red-800',
         link: 'text-[var(--brand-primary)] underline-offset-4 hover:underline',
       },
       size: {
