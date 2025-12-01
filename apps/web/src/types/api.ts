@@ -53,4 +53,49 @@ export type ApiUserListItem = {
   phone?: string | null;
 };
 
+export type DeleteClubResponse = {
+  success: boolean;
+  message: string;
+};
+
+export type DeleteAdminResponse = {
+  success: boolean;
+  message: string;
+};
+
+export type InviteUserRequest = {
+  email: string;
+  role: UserRole;
+  firstName: string;
+  lastName?: string;
+  phone?: string;
+  clubId?: string;
+};
+
+export type InviteUserResponse = {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string | null;
+  role: UserRole;
+  clubId: string | null;
+  phone: string | null;
+  supabaseUserId: string | null;
+};
+
+export type CreateClubRequest = {
+  name: string;
+  description?: string;
+  logoUrl?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+};
+
+export type CreateClubResponse = ApiClub;
+
+export type DeleteUserResponse = {
+  success: boolean;
+  message: string;
+};
+
 
