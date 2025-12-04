@@ -146,3 +146,4 @@ El `SupabaseAdminService` en `apps/api/src/auth/supabase-admin.service.ts` es el
 - [Supabase URL Configuration](https://supabase.com/docs/guides/auth/auth-deep-linking)
 - [Supabase Email Templates](https://supabase.com/docs/guides/auth/auth-email-templates)
 
+
