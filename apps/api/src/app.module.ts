@@ -14,7 +14,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { PlansModule } from './modules/plans/plans.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { ReservationsModule } from './modules/reservations/reservations.module';
-import { UsersModule } from './modules/users/users.module';
+import { UsersModule } from './users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({

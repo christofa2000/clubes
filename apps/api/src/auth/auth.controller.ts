@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, UnauthorizedException, UseGuards } from '@nestjs/common';
 
 import { CurrentUser } from './decorators/current-user.decorator';
 import { AuthGuard } from './guards/auth.guard';
@@ -11,7 +11,10 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(AuthGuard)
-  getMe(@CurrentUser() user: CurrentUserType): CurrentUserType {
+  getMe(@CurrentUser() user: CurrentUserType | null): CurrentUserType {
+    if (!user) {
+      throw new UnauthorizedException('AUTH_NO_USER');
+    }
     return this.authService.getProfile(user);
   }
 }

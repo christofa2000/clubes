@@ -1,24 +1,22 @@
 'use client';
 
-// Estrategia: panel cliente inspirado en app móvil, con sidebar, menú responsive y tarjetas informativas.
-import { useState } from 'react';
+// Estrategia: panel cliente inspirado en app móvil, ahora consume datos reales del backend sin perder el diseño original.
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { AlarmClock, CalendarDays, ChevronRight, CreditCard, Menu, X } from 'lucide-react';
 
 import { BrandingMark } from '@/components/branding/branding-mark';
 import { ClientSidebar } from '@/components/panels/client-sidebar';
 import { Button } from '@/components/ui/button';
 import { useBranding } from '@/context/branding-context';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import { apiFetch } from '@/lib/api';
+import type { ApiClub, ApiUserProfile } from '@/types/api';
 
 const UPCOMING = [
   { activity: 'Funcional', date: 'Hoy · 19:30 hs', location: 'Sede Caballito' },
   { activity: 'Tenis Intermedio', date: 'Mañana · 18:00 hs', location: 'Sede Núñez' },
   { activity: 'Yoga', date: 'Sábado · 10:00 hs', location: 'Sede Centro' },
-];
-
-const QUICK_STATS = [
-  { label: 'Clases esta semana', value: '5', trend: '+2 vs. semana pasada' },
-  { label: 'Último pago', value: '$72.000', trend: '15 Nov · Transferencia' },
-  { label: 'Sede favorita', value: 'Caballito', trend: 'Av. Rivadavia 4869' },
 ];
 
 const ANNOUNCEMENTS = [
@@ -28,7 +26,138 @@ const ANNOUNCEMENTS = [
 
 export default function ClientPanelPage(): JSX.Element {
   const [open, setOpen] = useState(false);
-  const { branding } = useBranding();
+  const router = useRouter();
+  const { branding, updateBranding } = useBranding();
+  const { data: currentUser, loading: authLoading } = useCurrentUser();
+  const [club, setClub] = useState<ApiClub | null>(null);
+  const [profile, setProfile] = useState<ApiUserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadData = useCallback(async () => {
+    if (typeof window !== 'undefined' && !localStorage.getItem('access_token')) {
+      setError('SESSION_REQUIRED');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const [clubResponse, profileResponse] = await Promise.all([
+        apiFetch<ApiClub>('/clubs/my'),
+        apiFetch<ApiUserProfile>('/users/me'),
+      ]);
+
+      setClub(clubResponse);
+      setProfile(profileResponse);
+
+      updateBranding({
+        appName: clubResponse.name,
+        logoUrl: clubResponse.logoUrl ?? undefined,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'API_ERROR');
+    } finally {
+      setLoading(false);
+    }
+  }, [updateBranding]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    if (!authLoading && currentUser && currentUser.role !== 'STUDENT') {
+      const redirectTo =
+        currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN'
+          ? '/admin'
+          : '/teacher';
+      router.replace(redirectTo);
+    }
+  }, [authLoading, currentUser, router]);
+
+  const handleLogout = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('access_token');
+    }
+    router.push('/login-cliente');
+  }, [router]);
+
+  const profileName = useMemo(() => {
+    if (!profile) {
+      return null;
+    }
+    const fullName = `${profile.firstName} ${profile.lastName ?? ''}`.trim();
+    return fullName.length > 0 ? fullName : profile.email;
+  }, [profile]);
+
+  const quickStats = useMemo(
+    () => [
+      {
+        label: 'Mi club',
+        value: club?.name ?? '—',
+        helper: club?.description ?? 'Club asignado',
+      },
+      {
+        label: 'Usuario',
+        value: profileName ?? profile?.email ?? currentUser?.email ?? '—',
+        helper: profile?.email ?? currentUser?.email ?? 'Sin email',
+      },
+      {
+        label: 'Rol',
+        value: currentUser?.role ?? '—',
+        helper: profile?.branchId ? `Sede ${profile.branchId.slice(0, 6)}` : 'Sin sede asignada',
+      },
+    ],
+    [club, currentUser, profile, profileName],
+  );
+
+  if (!loading && error === 'SESSION_REQUIRED') {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-[var(--brand-background)] px-4 py-10 text-center">
+        <div className="space-y-4 rounded-3xl border border-[var(--brand-border)] bg-[var(--brand-surface)] px-8 py-10 shadow-2xl">
+          <h1 className="text-2xl font-semibold text-[var(--brand-text)]">Necesitás iniciar sesión</h1>
+          <p className="text-sm text-[var(--brand-muted-text)]">Guardamos la UI, pero no encontramos un token válido.</p>
+          <Button onClick={handleLogout}>Ir al login</Button>
+        </div>
+      </main>
+    );
+  }
+
+  if (error && error !== 'SESSION_REQUIRED' && !loading) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-[var(--brand-background)] px-4 py-10 text-center">
+        <div className="space-y-5 rounded-3xl border border-[var(--brand-border)] bg-[var(--brand-surface)] px-8 py-10 shadow-2xl">
+          <h1 className="text-2xl font-semibold text-[var(--brand-text)]">No pudimos cargar tus datos</h1>
+          <p className="text-sm text-red-300">{error}</p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <Button
+              onClick={() => {
+                void loadData();
+              }}
+            >
+              Reintentar
+            </Button>
+            <Button onClick={handleLogout} variant="ghost">
+              Cerrar sesión
+            </Button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  const sidebarProps = {
+    userName: profileName ?? undefined,
+    userEmail: profile?.email ?? currentUser?.email,
+    planLabel: 'Alumno activo',
+    branchLabel: profile?.branchId ?? undefined,
+    onLogout: handleLogout,
+  };
+
+  const isBusy = loading || authLoading;
 
   return (
     <div className="min-h-screen bg-[var(--brand-background)] px-4 py-6">
@@ -62,7 +191,7 @@ export default function ClientPanelPage(): JSX.Element {
                   </button>
                 </div>
                 <div className="mt-4 max-h-[70vh] overflow-y-auto pr-2">
-                  <ClientSidebar />
+                  <ClientSidebar {...sidebarProps} />
                 </div>
               </div>
             </div>
@@ -70,17 +199,21 @@ export default function ClientPanelPage(): JSX.Element {
         </div>
 
         <div className="hidden lg:block lg:w-80">
-          <ClientSidebar />
+          <ClientSidebar {...sidebarProps} />
         </div>
 
         <section className="flex-1 space-y-6">
           <header className="rounded-3xl border border-[var(--brand-border)] bg-[var(--brand-surface)] p-6 shadow">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <p className="text-sm text-[var(--brand-muted-text)]">Bienvenida</p>
-                <h1 className="text-2xl font-semibold text-[var(--brand-text)]">Hola Camila 👋</h1>
+                <p className="text-sm text-[var(--brand-muted-text)]">
+                  {isBusy ? 'Sincronizando con el club...' : `Bienvenida · ${club?.name ?? branding.appName}`}
+                </p>
+                <h1 className="text-2xl font-semibold text-[var(--brand-text)]">
+                  Hola {profileName ?? 'alumno/a'} 👋
+                </h1>
                 <p className="mt-1 text-sm text-[var(--brand-muted-text)]">
-                  Recordatorio: llegá 10 minutos antes para validar asistencia con el QR de {branding.appName}.
+                  Recordatorio: llegá 10 minutos antes para validar asistencia con el QR de {club?.name ?? branding.appName}.
                 </p>
               </div>
               <div className="space-y-2 text-right">
@@ -97,20 +230,19 @@ export default function ClientPanelPage(): JSX.Element {
                     </button>
                   ))}
                 </nav>
-                <Button variant="secondary">Nueva reserva</Button>
+                <Button disabled={isBusy} variant="secondary">
+                  Nueva reserva
+                </Button>
               </div>
             </div>
           </header>
 
           <div className="grid gap-4 md:grid-cols-3">
-            {QUICK_STATS.map((stat) => (
-              <div
-                className="rounded-3xl border border-[var(--brand-border)] bg-[var(--brand-surface)] p-5"
-                key={stat.label}
-              >
+            {quickStats.map((stat) => (
+              <div className="rounded-3xl border border-[var(--brand-border)] bg-[var(--brand-surface)] p-5" key={stat.label}>
                 <p className="text-sm text-[var(--brand-muted-text)]">{stat.label}</p>
                 <p className="mt-1 text-3xl font-bold text-[var(--brand-accent)]">{stat.value}</p>
-                <p className="text-xs text-[var(--brand-muted-text)]">{stat.trend}</p>
+                <p className="text-xs text-[var(--brand-muted-text)]">{stat.helper}</p>
               </div>
             ))}
           </div>
@@ -152,6 +284,9 @@ export default function ClientPanelPage(): JSX.Element {
                 <Button className="mt-4" variant="secondary">
                   Ver comprobante
                 </Button>
+                <p className="mt-2 text-xs text-[var(--brand-muted-text)]">
+                  TODO(negocio): reemplazar por datos reales de pagos cuando el endpoint esté disponible.
+                </p>
               </div>
               <div className="rounded-3xl border border-[var(--brand-border)] bg-[var(--brand-primary)]/20 p-6 text-[var(--brand-accent)]">
                 <div className="flex items-center justify-between">
@@ -175,7 +310,7 @@ export default function ClientPanelPage(): JSX.Element {
 
           <div className="rounded-3xl border border-[var(--brand-border)] bg-[var(--brand-surface)] p-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Linea de tiempo</h2>
+              <h2 className="text-xl font-semibold">Línea de tiempo</h2>
               <Button size="sm" variant="ghost">
                 Ver historial
               </Button>

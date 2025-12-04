@@ -1,6 +1,7 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma, User } from '@prisma/client';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { PrismaService } from '../prisma/prisma.service';
 import type { CurrentUser, TokenIdentity } from './types/current-user.type';
@@ -8,15 +9,26 @@ import type { CurrentUser, TokenIdentity } from './types/current-user.type';
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private readonly supabaseUrl: string | undefined;
-  private readonly supabaseServiceKey: string | undefined;
+  private readonly supabase: SupabaseClient | null;
 
   constructor(
     private readonly prisma: PrismaService,
-    configService: ConfigService,
+    private readonly configService: ConfigService,
   ) {
-    this.supabaseUrl = configService.get<string>('SUPABASE_URL');
-    this.supabaseServiceKey = configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
+    const url = this.configService.get<string>('SUPABASE_URL');
+    const serviceRoleKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!url || !serviceRoleKey) {
+      this.logger.warn('[AuthService] Supabase no configurado, se usará fallback local limitado.');
+      this.supabase = null;
+    } else {
+      this.supabase = createClient(url, serviceRoleKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+    }
   }
 
   async resolveCurrentUser(authHeader?: string | string[]): Promise<CurrentUser> {
@@ -26,7 +38,9 @@ export class AuthService {
       throw new UnauthorizedException('AUTH_TOKEN_MISSING');
     }
 
-    const identity = await this.resolveTokenIdentity(token);
+    const identity = this.supabase
+      ? await this.resolveTokenViaSupabase(token)
+      : this.resolveTokenIdentityFallback(token);
 
     const prismaUser = await this.findUser(identity);
 
@@ -59,12 +73,32 @@ export class AuthService {
     return token;
   }
 
-  private async resolveTokenIdentity(token: string): Promise<TokenIdentity> {
-    const supabaseUser = await this.fetchSupabaseUser(token);
-    if (supabaseUser) {
-      return supabaseUser;
+  private async resolveTokenViaSupabase(token: string): Promise<TokenIdentity> {
+    if (!this.supabase) {
+      throw new UnauthorizedException('AUTH_SUPABASE_NOT_CONFIGURED');
     }
 
+    const { data, error } = await this.supabase.auth.getUser(token);
+
+    if (error) {
+      this.logger.warn(`Supabase token validation failed: ${error.message}`);
+      throw new UnauthorizedException('AUTH_INVALID_TOKEN');
+    }
+
+    const user = data.user as typeof data.user | null;
+
+    if (!user) {
+      this.logger.warn('Supabase token validation failed: payload missing user');
+      throw new UnauthorizedException('AUTH_INVALID_TOKEN');
+    }
+
+    return {
+      id: user.id,
+      email: user.email ?? undefined,
+    };
+  }
+
+  private resolveTokenIdentityFallback(token: string): TokenIdentity {
     const decoded = this.decodeJwtToken(token);
     if (decoded) {
       return decoded;
@@ -74,42 +108,15 @@ export class AuthService {
     return { id: token };
   }
 
-  private async fetchSupabaseUser(token: string): Promise<TokenIdentity | null> {
-    if (!this.supabaseUrl || !this.supabaseServiceKey) {
-      return null;
-    }
-
-    try {
-      const response = await fetch(`${this.supabaseUrl}/auth/v1/user`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          apikey: this.supabaseServiceKey,
-        },
-      });
-
-      if (!response.ok) {
-        this.logger.warn(
-          `Supabase validation failed with status ${String(response.status)}: ${response.statusText}`,
-        );
-        return null;
-      }
-
-      const payload = (await response.json()) as { id?: string; email?: string };
-      return {
-        id: payload.id ?? undefined,
-        email: payload.email ?? undefined,
-      };
-    } catch (error) {
-      this.logger.warn(`Supabase validation error: ${(error as Error).message}`);
-      return null;
-    }
-  }
-
   private decodeJwtToken(token: string): TokenIdentity | null {
     const parts = token.split('.');
 
     if (parts.length !== 3) {
       return null;
+    }
+
+    if (!parts[1]) {
+      throw new UnauthorizedException('AUTH_TOKEN_MALFORMED');
     }
 
     try {
@@ -129,22 +136,14 @@ export class AuthService {
     }
   }
 
-  private async findUser(identity: TokenIdentity): Promise<User | null> {
-    const filters: Prisma.UserWhereInput[] = [];
-
-    if (identity.id) {
-      filters.push({ id: identity.id });
-    }
-    if (identity.email) {
-      filters.push({ email: identity.email });
-    }
-
-    if (filters.length === 0) {
+  private async findUser(identity: TokenIdentity): Promise<Pick<User, 'id' | 'email' | 'role' | 'clubId'> | null> {
+    if (!identity.email && !identity.id) {
       return null;
     }
 
-    const where: Prisma.UserWhereInput =
-      filters.length === 1 ? filters[0] : { OR: filters };
+    const where: Prisma.UserWhereInput = identity.email
+      ? { email: identity.email }
+      : { id: identity.id as string };
 
     return this.prisma.user.findFirst({
       where,

@@ -1,7 +1,6 @@
 'use client';
 
-// Estrategia: sidebar reutilizable del panel cliente, cumple con los ítems obligatorios e iconografía grande.
-import Link from 'next/link';
+// Estrategia: sidebar reutilizable del panel cliente, ahora muestra datos reales del usuario y soporta logout controlado.
 import {
   CalendarDays,
   Clock4,
@@ -25,13 +24,27 @@ const MENU_ITEMS = [
   { icon: Settings2, label: 'Cambiar de sede' },
 ];
 
-export function ClientSidebar(): JSX.Element {
+type ClientSidebarProps = {
+  userName?: string;
+  userEmail?: string;
+  planLabel?: string;
+  branchLabel?: string;
+  onLogout: () => void;
+};
+
+export function ClientSidebar({
+  userName,
+  userEmail,
+  planLabel,
+  branchLabel,
+  onLogout,
+}: ClientSidebarProps): JSX.Element {
   return (
     <aside className="flex h-full flex-col rounded-3xl border border-[var(--brand-border)] bg-[var(--brand-surface)] p-0 shadow-2xl">
       <div className="space-y-2 rounded-t-3xl bg-[linear-gradient(135deg,var(--brand-primary),#ff8b3d)] p-6 text-[var(--brand-background)]">
-        <BrandingMark subtitle="Camila Torres · camila@club.com" />
+        <BrandingMark subtitle={[userName, userEmail].filter(Boolean).join(' · ')} />
         <span className="inline-flex rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
-          Plan Tenis 8 clases
+          {planLabel ?? 'Plan activo'}
         </span>
       </div>
       <nav className="flex-1 space-y-2 px-4 py-5 text-sm font-semibold text-[var(--brand-text)]">
@@ -50,20 +63,21 @@ export function ClientSidebar(): JSX.Element {
             ) : null}
           </button>
         ))}
-        <Link
-          className="flex items-center gap-4 rounded-2xl px-3 py-3 text-left text-slate-400 transition hover:bg-red-500/10 hover:text-red-200"
-          href="/"
+        <button
+          className="flex w-full items-center gap-4 rounded-2xl px-3 py-3 text-left text-slate-400 transition hover:bg-red-500/10 hover:text-red-200"
+          onClick={onLogout}
+          type="button"
         >
           <span className="rounded-2xl bg-red-500/15 p-2 text-2xl text-red-400">
             <LogOut className="h-7 w-7" />
           </span>
           Cerrar sesión
-        </Link>
+        </button>
       </nav>
       <div className="space-y-3 rounded-b-3xl border-t border-[var(--brand-border)] bg-[var(--brand-primary)]/10 p-5 text-sm text-[var(--brand-accent)]">
         <div>
           <p className="text-xs uppercase tracking-wide text-[var(--brand-accent)]/70">Sede actual</p>
-          <p className="text-lg font-semibold text-white">Caballito Premium</p>
+          <p className="text-lg font-semibold text-white">{branchLabel ?? 'Sin sede asignada'}</p>
           <p>Lunes a domingo · 7 a 23 hs</p>
         </div>
         <p className="text-xs text-[var(--brand-accent)]/70">Versión 2.0.17</p>

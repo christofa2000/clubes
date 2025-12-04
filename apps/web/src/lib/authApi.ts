@@ -150,4 +150,3 @@ export async function logout(): Promise<void> {
   const supabase = getSupabaseClient();
   await supabase.auth.signOut();
 }
-

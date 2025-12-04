@@ -2,7 +2,10 @@
 
 ## 📋 Resumen Ejecutivo
 
-**IMPORTANTE:** Este módulo NO tiene endpoints de login/register. La autenticación se maneja mediante **Supabase Auth** desde el frontend. El backend solo **valida tokens** que Supabase genera.
+**IMPORTANTE:** Este módulo NO tiene endpoints de login/register. La autenticación se maneja mediante **Supabase Auth** desde el frontend. El backend:
+
+1. **Valida tokens** que Supabase genera (`AuthService` / `AuthGuard`)
+2. **Provisiona usuarios** cuando se crean desde negocio (por ahora solo admins) usando el nuevo `SupabaseAdminService`.
 
 ### Endpoints Disponibles
 
@@ -18,6 +21,7 @@ Solo existe **1 endpoint** en `/auth`:
 apps/api/src/auth/
 ├── auth.controller.ts          # Controlador con endpoints públicos
 ├── auth.service.ts             # Servicio de validación de tokens
+├── supabase-admin.service.ts   # Servicio admin que crea/invita usuarios en Supabase
 ├── auth.module.ts              # Módulo NestJS
 ├── decorators/
 │   ├── current-user.decorator.ts  # Decorator para obtener usuario actual
@@ -660,7 +664,30 @@ Según la documentación del proyecto (`NEGOCIO_V1.md` y `USE_CASES.md`), deber�
 
 ## 📚 Referencias
 
+---
+
+## 🧩 Provisioning de usuarios (SupabaseAdminService)
+
+Para alinear el modelo de negocio (Prisma) con Supabase Auth, el módulo ahora expone `SupabaseAdminService`, disponible para otros módulos vía `AuthModule`. Este servicio usa la **service role key** y realiza acciones privilegiadas:
+
+- `inviteUserByEmail(email)` → envía una invitación oficial de Supabase. Si el email ya existe, lanza `ConflictException`.
+- `createUserWithPassword(email, password)` → helper genérico (no usado aún) para futuros flujos.
+- `deleteUser(userId)` → cleanup best-effort cuando Prisma falla después de provisionar en Supabase.
+
+### Flujo vigente: alta de ADMIN
+
+1. SUPER_ADMIN (frontend `/superadmin`) envía `POST /users/admin`.
+2. `UsersService.createAdmin` valida clubId/email y llama a `SupabaseAdminService.inviteUserByEmail`.
+3. Si Supabase confirma la invitación, se persiste el usuario en Prisma con `role=ADMIN`, `clubId`, y se guarda `supabaseUserId`.
+4. Si Prisma falla, se intenta borrar al usuario recién creado en Supabase para mantener consistencia.
+
+Este patrón será reutilizable para profesores/alumnos en próximos incrementos: basta con reutilizar el servicio desde los otros casos de uso y persistir el `supabaseUserId` asociado.
+
+> Requisitos de entorno: `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` deben estar definidos. Si faltan, `SupabaseAdminService` lanza `ServiceUnavailableException`.
+
+
 - Documentación del proyecto: `docs/NEGOCIO_V1.md`
 - Casos de uso: `docs/USE_CASES.md`
 - Reglas técnicas: `docs/TECH_RULES.md`
+
 

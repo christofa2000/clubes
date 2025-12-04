@@ -6,3 +6,13 @@ export class UpdatePlanDto extends PartialType(CreatePlanDto) {
   isActive?: boolean;
 }
 
+
+
+
+
+
+
+
+
+
+

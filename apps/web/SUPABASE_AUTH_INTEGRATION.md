@@ -382,3 +382,7 @@ async resolveCurrentUser(authHeader?: string | string[]): Promise<CurrentUser> {
 - Documentación del módulo de autenticación del backend: `apps/api/AUTH_MODULE_DOCUMENTATION.md`
 - Documentación del proyecto: `docs/NEGOCIO_V1.md`
 
+
+
+
+
