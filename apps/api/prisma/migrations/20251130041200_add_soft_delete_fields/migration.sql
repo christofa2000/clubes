@@ -7,3 +7,4 @@ ALTER TABLE "Club" ADD COLUMN "deletedAt" TIMESTAMP(3);
 -- AddColumn
 ALTER TABLE "User" ADD COLUMN "deletedAt" TIMESTAMP(3);
 
+
