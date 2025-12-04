@@ -25,12 +25,12 @@ Plataforma SaaS multi-club que centraliza la administración de sedes, actividad
 - **CORS**: Configurado para permitir requests desde `http://localhost:3000` (frontend).
 - **Módulos implementados**:
   - `auth`: `GET /auth/me` protegido con `AuthGuard`, valida tokens de Supabase y retorna usuario de Prisma. Servicio `SupabaseAdminService` para operaciones administrativas (invitación y eliminación de usuarios).
-  - `users`: 
+  - `users`:
     - Gestión completa de usuarios: `POST /users/admin`, `POST /users/students`, `POST /users/teachers`
     - Listados: `GET /users/admins`, `GET /users/students`, `GET /users/teachers`, `GET /users/me`
     - Invitación: `POST /users/invite` (solo SUPER_ADMIN) - Envía email de invitación con magic link
     - Eliminación: `DELETE /users/admins/:id`, `DELETE /users/:id` (solo SUPER_ADMIN) - Eliminación real en Supabase + soft delete en Prisma
-  - `clubs`: 
+  - `clubs`:
     - CRUD completo para SUPER_ADMIN: `GET /clubs`, `POST /clubs`, `GET /clubs/:id`, `DELETE /clubs/:id`
     - Endpoints multi-rol: `GET /clubs/my`, `PATCH /clubs/my` (para ADMIN)
     - Soft delete implementado (`isActive`, `deletedAt`)
@@ -55,7 +55,7 @@ Plataforma SaaS multi-club que centraliza la administración de sedes, actividad
    FRONTEND_URL="http://localhost:3000"
    ```
    > **Nunca** publiques credenciales (Supabase/API keys) en el repo o en canales abiertos.
-   > 
+   >
    > **Nota**: `FRONTEND_URL` se usa para construir las URLs de redirección en las invitaciones de usuarios.
 
 ### Scripts backend

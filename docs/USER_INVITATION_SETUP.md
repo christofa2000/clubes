@@ -147,3 +147,4 @@ El `SupabaseAdminService` en `apps/api/src/auth/supabase-admin.service.ts` es el
 - [Supabase Email Templates](https://supabase.com/docs/guides/auth/auth-email-templates)
 
 
+
